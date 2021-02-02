@@ -3,33 +3,39 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 import os
+import psycopg2
+from sqlalchemy import create_engine
 
-# from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
+engine = create_engine("postgresql://postgres:postgres@localhost:5432/spotify")
 
-# engine = create_engine("postgresql://postgres:postgres@localhost:5432/spotify_new_releases_db")
-# meta = MetaData()
+conn = psycopg2.connect("dbname=spotify user=postgres password=postgres")
+cur = conn.cursor()
 
-
-
-df = pd.DataFrame(columns=[
-    'id', 
-    'release_date',
-    'name',
-    'Artist',
-    'Features',
-    'popularity',
-    'danceability',
-    'energy',
-    'key',
-    'loudness',
-    'mode',
-    'speechiness',
-    'acousticness',
-    'instrumentalness',
-    'liveness',
-    'valence',
-    'tempo',
-])
+sql_query = """
+    CREATE TABLE IF NOT EXISTS spotify_new_releases(
+        id VARCHAR(200),
+        release_date VARCHAR(200),
+        name VARCHAR(200),
+        Artist VARCHAR(200),
+        Features INT,
+        popularity INT,
+        danceability NUMERIC,
+        energy NUMERIC,
+        key INT,
+        loudness NUMERIC,
+        mode INT,
+        speechiness NUMERIC,
+        acousticness NUMERIC,
+        instrumentalness NUMERIC,
+        liveness NUMERIC,
+        valence NUMERIC,
+        tempo NUMERIC,
+        CONSTRAINT primary_key_constraint PRIMARY KEY (id)
+    )
+    """
+cur.execute(sql_query)
+conn.commit()
+df = pd.DataFrame()
 
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
@@ -88,8 +94,8 @@ while releases:
                 'id': track_id,
                 'release_date':track_info['album']['release_date'], 
                 'name': track_info['name'],
-                'Artist': track_info['artists'][0]['name'],
-                'Features': len(track_info['artists']) -1,
+                'artist': track_info['artists'][0]['name'],
+                'features': len(track_info['artists']) -1,
                 'popularity': track_info['popularity'],
                 'danceability': audio_features['danceability'],
                 'energy': audio_features['energy'],
@@ -106,4 +112,7 @@ while releases:
                 ignore_index=True)
     offset += 50
 
-df.to_csv('test.csv')
+
+df.to_sql("spotify_new_releases", engine, index=False, if_exists='append')
+
+conn.close()
