@@ -112,7 +112,9 @@ while releases:
                 ignore_index=True)
     offset += 50
 
-
-df.to_sql("spotify_new_releases", engine, index=False, if_exists='append')
-
+for index, row in enumerate(df):
+    try:
+        df.loc[[index]].to_sql("spotify_new_releases", engine, index=False, if_exists='append')
+    except IntegrityError:
+        pass 
 conn.close()
